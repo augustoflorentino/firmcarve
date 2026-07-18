@@ -1,7 +1,12 @@
 #include "internal.h"
 
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
+
+#define FWC_ENTROPY_WINDOW 65536
+#define FWC_ENTROPY_LIMIT 7.9
+#define FWC_PADDING_RUN 16
 
 static uint64_t fwc_get(const unsigned char *p, size_t n, int big)
 {
@@ -218,4 +223,80 @@ size_t fwc_try_tar(fwc_scope_t *scope, size_t at)
     if (node != (size_t)-1)
         fwc_tar_walk(scope, at, node);
     return size;
+}
+
+static double fwc_entropy(const unsigned char *p, size_t n)
+{
+    size_t counts[256] = {0}, i;
+    double e = 0;
+
+    for (i = 0; i < n; i++)
+        counts[p[i]]++;
+    for (i = 0; i < 256; i++) {
+        double f = (double)counts[i] / (double)n;
+
+        if (counts[i])
+            e -= f * log2(f);
+    }
+    return e;
+}
+
+static uint64_t fwc_owned_bytes(const unsigned char *p, size_t n)
+{
+    uint64_t owned = 0;
+    size_t i = 0, run;
+
+    while (i < n) {
+        for (run = 1; i + run < n && p[i + run] == p[i]; run++)
+            ;
+        if (!((p[i] == 0 || p[i] == 0xff) && run >= FWC_PADDING_RUN))
+            owned += run;
+        i += run;
+    }
+    return owned;
+}
+
+static void fwc_high(fwc_scope_t *scope, size_t start, size_t end)
+{
+    size_t node = fwc_add_node(scope, FWC_KIND_UNKNOWN, "high-entropy", fwc_strf(scope->tree, "data@0x%zx", start),
+                               start, end - start, scope->buf + start, end - start);
+
+    if (node != (size_t)-1)
+        fwc_warn(scope->tree, FWC_WARN_HIGH_ENTROPY, scope->tree->nodes[node].path,
+                 "64 KiB or more above 7.9 bits/byte, no known format");
+    scope->tree->any_unknown = 1;
+}
+
+static void fwc_gap(fwc_scope_t *scope, size_t from, size_t to)
+{
+    size_t at, start = 0;
+    int open = 0, high;
+
+    scope->tree->unattributed += fwc_owned_bytes(scope->buf + from, to - from);
+    for (at = from; to - at >= FWC_ENTROPY_WINDOW; at += FWC_ENTROPY_WINDOW) {
+        high = fwc_entropy(scope->buf + at, FWC_ENTROPY_WINDOW) > FWC_ENTROPY_LIMIT;
+        if (high && !open)
+            start = at;
+        else if (!high && open)
+            fwc_high(scope, start, at);
+        open = high;
+    }
+    if (open)
+        fwc_high(scope, start, at);
+}
+
+void fwc_measure(fwc_scope_t *scope, const size_t *claims, size_t count)
+{
+    size_t i, last = 0;
+
+    for (i = 0; i < count; i += 2) {
+        if (claims[i] > last)
+            fwc_gap(scope, last, claims[i]);
+        last = claims[i + 1];
+    }
+    if (scope->len > last)
+        fwc_gap(scope, last, scope->len);
+    if (scope->tree->unattributed)
+        fwc_warn(scope->tree, FWC_WARN_UNATTRIBUTED, "",
+                 fwc_strf(scope->tree, "%llu bytes", (unsigned long long)scope->tree->unattributed));
 }

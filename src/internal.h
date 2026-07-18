@@ -49,5 +49,6 @@ size_t fwc_try_fs(fwc_scope_t *scope, size_t at);
 size_t fwc_try_identified(fwc_scope_t *scope, size_t at);
 size_t fwc_try_cpio(fwc_scope_t *scope, size_t at);
 size_t fwc_try_tar(fwc_scope_t *scope, size_t at);
+void fwc_measure(fwc_scope_t *scope, const size_t *claims, size_t count);
 
 #endif

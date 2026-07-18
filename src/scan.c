@@ -125,6 +125,8 @@ void fwc_scan(fwc_scope_t *scope)
         claims[count++] = at + size;
         at += size;
     }
+    if (scope->depth == 0)
+        fwc_measure(scope, claims, count);
     free(claims);
 }
 
