@@ -75,7 +75,7 @@ static size_t fwc_try_at(fwc_scope_t *scope, size_t at)
 
     if ((size = fwc_try_container(scope, at)) != 0 || (size = fwc_try_fs(scope, at)) != 0 || (size = fwc_try_stream(scope, at)) != 0 || (size = fwc_try_cpio(scope, at)) != 0 || (size = fwc_try_tar(scope, at)) != 0)
         return size;
-    return 0;
+    return fwc_try_identified(scope, at);
 }
 
 static void fwc_build_filter(unsigned char *near, unsigned char *far)

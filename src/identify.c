@@ -3,6 +3,90 @@
 #include <stdlib.h>
 #include <string.h>
 
+static uint64_t fwc_get(const unsigned char *p, size_t n, int big)
+{
+    uint64_t v = 0;
+    size_t i;
+
+    for (i = 0; i < n; i++)
+        v |= (uint64_t)p[big ? n - 1 - i : i] << (8 * i);
+    return v;
+}
+
+static size_t fwc_elf_size(const unsigned char *h, size_t avail)
+{
+    int wide = h[4] == 2, big = h[5] == 2;
+    uint64_t shoff, phoff, end, ph_end = 0;
+    unsigned shnum, shentsize, phnum, phentsize, i;
+
+    if ((h[4] != 1 && h[4] != 2) || (h[5] != 1 && h[5] != 2) || h[6] != 1 || avail < (wide ? 64u : 52u))
+        return 0;
+    phoff = fwc_get(h + (wide ? 32 : 28), wide ? 8 : 4, big);
+    shoff = fwc_get(h + (wide ? 40 : 32), wide ? 8 : 4, big);
+    phentsize = (unsigned)fwc_get(h + (wide ? 54 : 42), 2, big);
+    phnum = (unsigned)fwc_get(h + (wide ? 56 : 44), 2, big);
+    shentsize = (unsigned)fwc_get(h + (wide ? 58 : 46), 2, big);
+    shnum = (unsigned)fwc_get(h + (wide ? 60 : 48), 2, big);
+    if (phoff > avail || (uint64_t)phnum * phentsize > avail - phoff || shoff > avail ||
+        (uint64_t)shnum * shentsize > avail - shoff || (phnum && phentsize < (wide ? 56u : 32u)))
+        return 0;
+    end = shoff + (uint64_t)shnum * shentsize;
+    for (i = 0; i < phnum; i++) {
+        const unsigned char *ph = h + phoff + (uint64_t)i * phentsize;
+        uint64_t off = fwc_get(ph + (wide ? 8 : 4), wide ? 8 : 4, big);
+        uint64_t filesz = fwc_get(ph + (wide ? 32 : 16), wide ? 8 : 4, big);
+
+        if (off <= avail && filesz <= avail - off && off + filesz > ph_end)
+            ph_end = off + filesz;
+    }
+    end = end > ph_end ? end : ph_end;
+    return end >= (wide ? 64u : 52u) && end <= avail ? (size_t)end : 0;
+}
+
+static size_t fwc_squashfs_size(const unsigned char *h, size_t avail)
+{
+    uint64_t used;
+
+    if (avail < 96 || memcmp(h, "hsqs", 4) != 0 || fwc_get(h + 0x1c, 2, 0) != 4)
+        return 0;
+    used = fwc_get(h + 0x28, 8, 0);
+    return used >= 96 && used <= avail ? (size_t)used : 0;
+}
+
+static size_t fwc_pem_size(const unsigned char *h, size_t avail)
+{
+    size_t i;
+
+    if (avail < 32 || memcmp(h, "-----BEGIN ", 11) != 0)
+        return 0;
+    for (i = 11; i + 9 <= avail && i < 65536; i++) {
+        if (memcmp(h + i, "-----END ", 9) != 0)
+            continue;
+        for (i += 9; i < avail && h[i] != '\n'; i++)
+            ;
+        return i < avail ? i + 1 : i;
+    }
+    return 0;
+}
+
+size_t fwc_try_identified(fwc_scope_t *scope, size_t at)
+{
+    const unsigned char *h = scope->buf + at;
+    size_t avail = scope->len - at, size = 0;
+    const char *format = NULL;
+
+    if (avail >= 4 && memcmp(h, "\x7f" "ELF", 4) == 0 && (size = fwc_elf_size(h, avail)) != 0)
+        format = "elf";
+    else if ((size = fwc_squashfs_size(h, avail)) != 0)
+        format = "squashfs";
+    else if ((size = fwc_pem_size(h, avail)) != 0)
+        format = "pem";
+    if (format == NULL)
+        return 0;
+    fwc_add_node(scope, FWC_KIND_IDENTIFIED, format, fwc_strf(scope->tree, "%s@0x%zx", format, at), at, size, h, size);
+    return size;
+}
+
 static unsigned fwc_hex(const unsigned char *p, int *ok)
 {
     unsigned v = 0;
