@@ -88,11 +88,17 @@ FWC_API size_t fwc_warning_count(const fwc_tree_t *tree);
 FWC_API const fwc_warning_t *fwc_warning_get(const fwc_tree_t *tree, size_t index);
 FWC_API int fwc_signed(const fwc_tree_t *tree);
 FWC_API uint64_t fwc_unattributed(const fwc_tree_t *tree);
+FWC_API unsigned fwc_features(void);
 
 FWC_API const char *fwc_version(void);
 FWC_API const char *fwc_strerror(int status);
 FWC_API const char *fwc_kind_name(int kind);
 FWC_API const char *fwc_warning_name(int code);
+
+#define FWC_FEATURE_ZLIB 0x1u
+#define FWC_FEATURE_LZMA 0x2u
+#define FWC_FEATURE_ZSTD 0x4u
+#define FWC_FEATURE_BZIP2 0x8u
 
 #ifdef __cplusplus
 }
