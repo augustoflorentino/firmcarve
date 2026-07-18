@@ -73,7 +73,7 @@ static size_t fwc_try_at(fwc_scope_t *scope, size_t at)
 {
     size_t size;
 
-    if ((size = fwc_try_container(scope, at)) != 0 || (size = fwc_try_fs(scope, at)) != 0 || (size = fwc_try_stream(scope, at)) != 0)
+    if ((size = fwc_try_container(scope, at)) != 0 || (size = fwc_try_fs(scope, at)) != 0 || (size = fwc_try_stream(scope, at)) != 0 || (size = fwc_try_cpio(scope, at)) != 0 || (size = fwc_try_tar(scope, at)) != 0)
         return size;
     return 0;
 }

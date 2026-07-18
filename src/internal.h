@@ -46,5 +46,7 @@ void fwc_scan_child(fwc_scope_t *scope, size_t node, const unsigned char *buf, s
 
 size_t fwc_try_stream(fwc_scope_t *scope, size_t at);
 size_t fwc_try_fs(fwc_scope_t *scope, size_t at);
+size_t fwc_try_cpio(fwc_scope_t *scope, size_t at);
+size_t fwc_try_tar(fwc_scope_t *scope, size_t at);
 
 #endif
