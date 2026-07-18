@@ -45,5 +45,6 @@ void fwc_scan(fwc_scope_t *scope);
 void fwc_scan_child(fwc_scope_t *scope, size_t node, const unsigned char *buf, size_t len);
 
 size_t fwc_try_stream(fwc_scope_t *scope, size_t at);
+size_t fwc_try_fs(fwc_scope_t *scope, size_t at);
 
 #endif

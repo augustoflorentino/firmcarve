@@ -2,5 +2,6 @@
 
 include(CMakeFindDependencyMacro)
 find_dependency(firmhead 3)
+find_dependency(flashfs)
 include("${CMAKE_CURRENT_LIST_DIR}/firmcarveTargets.cmake")
 check_required_components(firmcarve)

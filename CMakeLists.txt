@@ -3,7 +3,7 @@ file(STRINGS include/firmcarve/firmcarve.h FIRMCARVE_VERSION REGEX "^#define FWC
 string(REGEX REPLACE ".*\"(.*)\"" "\\1" FIRMCARVE_VERSION "${FIRMCARVE_VERSION}")
 project(firmcarve VERSION ${FIRMCARVE_VERSION} DESCRIPTION "Firmware carver: find, validate and unpack every region of a firmware blob" LANGUAGES C)
 
-set(FIRMCARVE_DEPS_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "Where firmhead sources live when no installed copy is found")
+set(FIRMCARVE_DEPS_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "Where firmhead and flashfs sources live when no installed copy is found")
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
@@ -12,10 +12,14 @@ find_package(firmhead 3 QUIET)
 if(NOT firmhead_FOUND)
     add_subdirectory(${FIRMCARVE_DEPS_DIR}/firmhead ${PROJECT_BINARY_DIR}/deps/firmhead EXCLUDE_FROM_ALL)
 endif()
+find_package(flashfs QUIET)
+if(NOT flashfs_FOUND)
+    add_subdirectory(${FIRMCARVE_DEPS_DIR}/flashfs ${PROJECT_BINARY_DIR}/deps/flashfs EXCLUDE_FROM_ALL)
+endif()
 
-add_library(firmcarve src/tree.c src/scan.c src/streams.c)
+add_library(firmcarve src/tree.c src/scan.c src/streams.c src/fs.c)
 add_library(firmcarve::firmcarve ALIAS firmcarve)
-target_link_libraries(firmcarve PRIVATE firmhead::firmhead)
+target_link_libraries(firmcarve PRIVATE firmhead::firmhead flashfs::flashfs)
 
 set(FIRMCARVE_CODECS "")
 find_package(ZLIB QUIET)
