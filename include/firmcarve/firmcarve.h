@@ -77,6 +77,7 @@ typedef struct fwc_options {
     uint64_t max_entries;
     fwc_node_fn on_node;
     void *ctx;
+    const char *extract_dir;
 } fwc_options_t;
 
 FWC_API void fwc_options_init(fwc_options_t *options);

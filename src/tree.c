@@ -67,6 +67,8 @@ size_t fwc_add_node(fwc_scope_t *scope, int kind, const char *format, const char
     tree->node_count++;
     if (tree->options.on_node)
         tree->options.on_node(tree->options.ctx, node, data, data_len);
+    if (tree->options.extract_dir && data && kind != FWC_KIND_IDENTIFIED)
+        fwc_extract_node(tree, node, data, data_len);
     return node->index;
 }
 

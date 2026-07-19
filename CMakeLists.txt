@@ -17,7 +17,7 @@ if(NOT flashfs_FOUND)
     add_subdirectory(${FIRMCARVE_DEPS_DIR}/flashfs ${PROJECT_BINARY_DIR}/deps/flashfs EXCLUDE_FROM_ALL)
 endif()
 
-add_library(firmcarve src/tree.c src/scan.c src/identify.c src/streams.c src/fs.c)
+add_library(firmcarve src/tree.c src/scan.c src/identify.c src/streams.c src/fs.c src/extract.c)
 add_library(firmcarve::firmcarve ALIAS firmcarve)
 target_link_libraries(firmcarve PRIVATE firmhead::firmhead flashfs::flashfs)
 find_library(FIRMCARVE_LIBM m)
