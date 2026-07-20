@@ -3,6 +3,7 @@ file(STRINGS include/firmcarve/firmcarve.h FIRMCARVE_VERSION REGEX "^#define FWC
 string(REGEX REPLACE ".*\"(.*)\"" "\\1" FIRMCARVE_VERSION "${FIRMCARVE_VERSION}")
 project(firmcarve VERSION ${FIRMCARVE_VERSION} DESCRIPTION "Firmware carver: find, validate and unpack every region of a firmware blob" LANGUAGES C)
 
+option(FIRMCARVE_BUILD_TESTS "Build tests" OFF)
 option(FIRMCARVE_BUILD_EXAMPLES "Build examples" OFF)
 set(FIRMCARVE_DEPS_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "Where firmhead and flashfs sources live when no installed copy is found")
 
@@ -75,6 +76,14 @@ configure_package_config_file(cmake/firmcarveConfig.cmake.in ${PROJECT_BINARY_DI
 write_basic_package_version_file(${PROJECT_BINARY_DIR}/firmcarveConfigVersion.cmake COMPATIBILITY SameMajorVersion)
 install(FILES ${PROJECT_BINARY_DIR}/firmcarveConfig.cmake ${PROJECT_BINARY_DIR}/firmcarveConfigVersion.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/firmcarve)
+
+if(FIRMCARVE_BUILD_TESTS)
+    enable_testing()
+    add_executable(test_firmcarve tests/test_firmcarve.c)
+    target_link_libraries(test_firmcarve PRIVATE firmcarve)
+    target_compile_definitions(test_firmcarve PRIVATE FWC_TEST_DATA="${PROJECT_SOURCE_DIR}/tests/data")
+    add_test(NAME firmcarve COMMAND test_firmcarve)
+endif()
 
 if(FIRMCARVE_BUILD_EXAMPLES)
     add_executable(firmcarve-tool examples/firmcarve.c)
