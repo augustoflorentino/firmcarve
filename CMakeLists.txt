@@ -5,6 +5,7 @@ project(firmcarve VERSION ${FIRMCARVE_VERSION} DESCRIPTION "Firmware carver: fin
 
 option(FIRMCARVE_BUILD_TESTS "Build tests" OFF)
 option(FIRMCARVE_BUILD_EXAMPLES "Build examples" OFF)
+option(FIRMCARVE_BUILD_FUZZ "Build libFuzzer target" OFF)
 set(FIRMCARVE_DEPS_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "Where firmhead and flashfs sources live when no installed copy is found")
 
 include(GNUInstallDirs)
@@ -91,3 +92,8 @@ if(FIRMCARVE_BUILD_EXAMPLES)
     target_link_libraries(firmcarve-tool PRIVATE firmcarve)
 endif()
 
+if(FIRMCARVE_BUILD_FUZZ)
+    add_executable(fuzz_carve fuzz/fuzz_carve.c)
+    target_link_libraries(fuzz_carve PRIVATE firmcarve)
+    target_link_options(fuzz_carve PRIVATE -fsanitize=fuzzer)
+endif()
