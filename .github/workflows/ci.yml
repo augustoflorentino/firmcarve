@@ -1,0 +1,66 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc, clang]
+        codecs: [all, none]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          path: firmcarve
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: augustoflorentino/firmhead
+          ref: v3.2.0
+          path: firmhead
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: augustoflorentino/flashfs
+          ref: v0.4.0
+          path: flashfs
+      - if: matrix.codecs == 'all'
+        run: sudo apt-get update && sudo apt-get install -y zlib1g-dev liblzma-dev libzstd-dev libbz2-dev liblz4-dev liblzo2-dev
+      - run: |
+          cmake -S firmcarve -B build -DCMAKE_C_COMPILER=${{ matrix.cc }} -DCMAKE_BUILD_TYPE=Debug \
+            -DFIRMCARVE_BUILD_TESTS=ON -DFIRMCARVE_BUILD_EXAMPLES=ON -DCMAKE_C_FLAGS="-Wall -Wextra -Werror"
+          cmake --build build -j
+          ctest --test-dir build --output-on-failure
+
+  sanitizers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          path: firmcarve
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: augustoflorentino/firmhead
+          ref: v3.2.0
+          path: firmhead
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: augustoflorentino/flashfs
+          ref: v0.4.0
+          path: flashfs
+      - run: sudo apt-get update && sudo apt-get install -y zlib1g-dev liblzma-dev libzstd-dev libbz2-dev
+      - run: |
+          cmake -S firmcarve -B build -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=Debug -DFIRMCARVE_BUILD_TESTS=ON \
+            -DCMAKE_C_FLAGS="-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer"
+          cmake --build build -j
+          ctest --test-dir build --output-on-failure
