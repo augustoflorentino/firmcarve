@@ -86,6 +86,19 @@ void fwc_warn(fwc_tree_t *tree, int code, const char *where, const char *detail)
     w->detail = fwc_strf(tree, "%s", detail);
 }
 
+void fwc_missing(fwc_scope_t *scope, const char *what)
+{
+    fwc_tree_t *tree = scope->tree;
+    size_t i;
+
+    for (i = 0; i < tree->missing_count; i++)
+        if (strcmp(tree->missing[i], what) == 0)
+            return;
+    if (tree->missing_count < sizeof(tree->missing) / sizeof(tree->missing[0]))
+        tree->missing[tree->missing_count++] = what;
+    fwc_warn(tree, FWC_WARN_MISSING_EXTRA, scope->path, what);
+}
+
 int fwc_take(fwc_tree_t *tree, uint64_t bytes, const char *where)
 {
     if (tree->options.max_total_bytes - tree->produced < bytes) {

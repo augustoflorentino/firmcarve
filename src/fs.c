@@ -21,12 +21,25 @@ static int fwc_fs_magic(const unsigned char *h, size_t avail)
            memcmp(h, "UBI#", 4) == 0 || memcmp(h, "\x31\x18\x10\x06", 4) == 0;
 }
 
-static void fwc_fs_file(fwc_walk_t *w, const char *path, mtdf_ino_t ino)
+size_t fwc_fs_file(fwc_scope_t *scope, size_t fs_node, const char *path, const unsigned char *data, size_t len)
 {
-    fwc_scope_t inner = *w->scope;
+    fwc_scope_t inner = *scope;
+    size_t child;
+
+    inner.parent = fs_node;
+    inner.depth = scope->depth + 1;
+    inner.path = scope->tree->nodes[fs_node].path;
+    child = fwc_add_node(&inner, FWC_KIND_FILE, "file", path, 0, len, data, len);
+    if (child != (size_t)-1)
+        fwc_scan_child(&inner, child, data, len);
+    return child;
+}
+
+static void fwc_mtd_file(fwc_walk_t *w, const char *path, mtdf_ino_t ino)
+{
     mtdf_stat_t st;
     unsigned char *data;
-    size_t got = 0, child;
+    size_t got = 0;
 
     if (mtdf_stat(w->fs, ino, &st) != MTDF_OK || st.size == 0)
         return;
@@ -38,18 +51,14 @@ static void fwc_fs_file(fwc_walk_t *w, const char *path, mtdf_ino_t ino)
         w->scope->tree->failed = 1;
         return;
     }
-    inner.parent = w->node;
-    inner.depth = w->scope->depth + 1;
-    inner.path = w->scope->tree->nodes[w->node].path;
-    if (mtdf_read(w->fs, ino, 0, data, (size_t)st.size, &got) != MTDF_OK) {
+    if (mtdf_read(w->fs, ino, 0, data, (size_t)st.size, &got) != MTDF_OK)
         fwc_warn(w->scope->tree, FWC_WARN_UNPACK_FAILED, path, "read failed");
-    } else if ((child = fwc_add_node(&inner, FWC_KIND_FILE, "file", path, 0, got, data, got)) != (size_t)-1) {
-        fwc_scan_child(&inner, child, data, got);
-    }
+    else
+        fwc_fs_file(w->scope, w->node, path, data, got);
     free(data);
 }
 
-static void fwc_fs_dir(fwc_walk_t *w, const char *dir, mtdf_ino_t ino, unsigned depth)
+static void fwc_mtd_dir(fwc_walk_t *w, const char *dir, mtdf_ino_t ino, unsigned depth)
 {
     uint64_t cookie = 0;
     mtdf_dirent_t entry;
@@ -60,9 +69,9 @@ static void fwc_fs_dir(fwc_walk_t *w, const char *dir, mtdf_ino_t ino, unsigned 
     while (!w->scope->tree->failed && mtdf_readdir(w->fs, ino, &cookie, &entry) == MTDF_OK) {
         path = fwc_strf(w->scope->tree, "%s/%s", dir, entry.name);
         if (entry.type == MTDF_TYPE_DIR)
-            fwc_fs_dir(w, path, entry.ino, depth + 1);
+            fwc_mtd_dir(w, path, entry.ino, depth + 1);
         else if (entry.type == MTDF_TYPE_FILE)
-            fwc_fs_file(w, path, entry.ino);
+            fwc_mtd_file(w, path, entry.ino);
     }
 }
 
@@ -74,7 +83,7 @@ size_t fwc_try_fs(fwc_scope_t *scope, size_t at)
     const char *format;
 
     if (!fwc_fs_magic(scope->buf + at, scope->len - at))
-        return 0;
+        return fwc_try_squashfs(scope, at);
     memset(&opts, 0, sizeof(opts));
     opts.max_total_bytes = scope->tree->options.max_total_bytes;
     opts.max_file_bytes = scope->tree->options.max_entry_bytes;
@@ -89,7 +98,7 @@ size_t fwc_try_fs(fwc_scope_t *scope, size_t at)
     w.node = fwc_add_node(scope, FWC_KIND_FILESYSTEM, format, fwc_strf(scope->tree, "%s@0x%zx", format, at), at,
                           info.image_size, NULL, 0);
     if (w.node != (size_t)-1)
-        fwc_fs_dir(&w, "", MTDF_ROOT, 0);
+        fwc_mtd_dir(&w, "", MTDF_ROOT, 0);
     mtdf_close(w.fs);
     return (size_t)info.image_size;
 }

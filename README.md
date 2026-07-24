@@ -2,9 +2,8 @@
 
 Finds, validates and unpacks every region of a firmware blob, from an in-memory buffer, and
 returns them as a tree: containers (everything [firmhead](https://github.com/augustoflorentino/firmhead) reads), flash filesystems
-(JFFS2, CramFS, UBI and UBIFS through [flashfs](https://github.com/augustoflorentino/flashfs)), compressed streams (gzip, xz, lzma,
-zstd, bzip2), cpio and tar archives, and ELF, squashfs and PEM regions identified without
-unpacking.
+(JFFS2, CramFS, UBI and UBIFS through [flashfs](https://github.com/augustoflorentino/flashfs), and SquashFS through a built-in reader), compressed streams (gzip, xz, lzma,
+zstd, bzip2), cpio and tar archives, and ELF and PEM regions identified without unpacking.
 
 A region only enters the tree when its format validates it: a container header has to parse, a
 filesystem has to mount, a stream has to decode. A container whose checksum is bad is reported

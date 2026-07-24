@@ -220,10 +220,8 @@ size_t fwc_try_stream(fwc_scope_t *scope, size_t at)
         return 0;
     out.limit = (size_t)scope->tree->options.max_entry_bytes;
     used = fwc_decode(kind, scope->buf + at, scope->len - at, &out, &missing);
-    if (missing && !(scope->tree->missing_warned & (1u << (unsigned char)kind[0] % 32))) {
-        scope->tree->missing_warned |= 1u << (unsigned char)kind[0] % 32;
-        fwc_warn(scope->tree, FWC_WARN_MISSING_EXTRA, scope->path, kind);
-    }
+    if (missing)
+        fwc_missing(scope, kind);
     if (used == 0 || !fwc_take(scope->tree, out.len, scope->path)) {
         free(out.data);
         return 0;
@@ -251,6 +249,12 @@ unsigned fwc_features(void)
 #endif
 #ifdef FWC_HAVE_BZIP2
     f |= FWC_FEATURE_BZIP2;
+#endif
+#ifdef FWC_HAVE_LZ4
+    f |= FWC_FEATURE_LZ4;
+#endif
+#ifdef FWC_HAVE_LZO
+    f |= FWC_FEATURE_LZO;
 #endif
     return f;
 }

@@ -21,9 +21,9 @@ extern "C" {
 #endif
 
 #define FWC_VERSION_MAJOR 0
-#define FWC_VERSION_MINOR 1
+#define FWC_VERSION_MINOR 2
 #define FWC_VERSION_PATCH 0
-#define FWC_VERSION_STRING "0.1.0"
+#define FWC_VERSION_STRING "0.2.0"
 
 #define FWC_OK 0
 #define FWC_ERR_ARG 1
@@ -100,6 +100,8 @@ FWC_API const char *fwc_warning_name(int code);
 #define FWC_FEATURE_LZMA 0x2u
 #define FWC_FEATURE_ZSTD 0x4u
 #define FWC_FEATURE_BZIP2 0x8u
+#define FWC_FEATURE_LZ4 0x10u
+#define FWC_FEATURE_LZO 0x20u
 
 #ifdef __cplusplus
 }

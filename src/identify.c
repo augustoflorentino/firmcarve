@@ -48,16 +48,6 @@ static size_t fwc_elf_size(const unsigned char *h, size_t avail)
     return end >= (wide ? 64u : 52u) && end <= avail ? (size_t)end : 0;
 }
 
-static size_t fwc_squashfs_size(const unsigned char *h, size_t avail)
-{
-    uint64_t used;
-
-    if (avail < 96 || memcmp(h, "hsqs", 4) != 0 || fwc_get(h + 0x1c, 2, 0) != 4)
-        return 0;
-    used = fwc_get(h + 0x28, 8, 0);
-    return used >= 96 && used <= avail ? (size_t)used : 0;
-}
-
 static size_t fwc_pem_size(const unsigned char *h, size_t avail)
 {
     size_t i;
@@ -82,8 +72,6 @@ size_t fwc_try_identified(fwc_scope_t *scope, size_t at)
 
     if (avail >= 4 && memcmp(h, "\x7f" "ELF", 4) == 0 && (size = fwc_elf_size(h, avail)) != 0)
         format = "elf";
-    else if ((size = fwc_squashfs_size(h, avail)) != 0)
-        format = "squashfs";
     else if ((size = fwc_pem_size(h, avail)) != 0)
         format = "pem";
     if (format == NULL)

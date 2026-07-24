@@ -82,7 +82,7 @@ static size_t fwc_try_at(fwc_scope_t *scope, size_t at)
 
 static void fwc_build_filter(unsigned char *near, unsigned char *far)
 {
-    static const unsigned char extra[] = {0x85, 0x19, 0x45, 0x28, 'U', 0x31, 0x1f, 0xfd, 0x5d, 0x6d,
+    static const unsigned char extra[] = {0x85, 0x19, 0x45, 0x28, 'U', 0x31, 0x1f, 0xfd, 0x5d, 0x6d, 'h', 0x04, 0x89, 'P',
                                           0x28, 'B',  0x7f, 'h',  '0', '-'};
     const fwh_magic_t *magics;
     size_t i, count;

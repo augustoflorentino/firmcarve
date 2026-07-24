@@ -23,7 +23,8 @@ struct fwc_tree {
     int any_signed;
     int any_unknown;
     int total_warned;
-    unsigned missing_warned;
+    const char *missing[16];
+    size_t missing_count;
     int failed;
 };
 
@@ -35,6 +36,21 @@ typedef struct {
     unsigned depth;
     const char *path;
 } fwc_scope_t;
+
+#define FWC_CODEC_ZLIB 1
+#define FWC_CODEC_DEFLATE 2
+#define FWC_CODEC_LZMA 3
+#define FWC_CODEC_XZ 4
+#define FWC_CODEC_ZSTD 5
+#define FWC_CODEC_LZ4 6
+#define FWC_CODEC_LZO 7
+
+int fwc_codec_available(int codec);
+int fwc_decode_block(int codec, const unsigned char *in, size_t in_len, unsigned char *out, size_t cap,
+                     size_t *out_len);
+void fwc_missing(fwc_scope_t *scope, const char *what);
+size_t fwc_fs_file(fwc_scope_t *scope, size_t fs_node, const char *path, const unsigned char *data, size_t len);
+size_t fwc_try_squashfs(fwc_scope_t *scope, size_t at);
 
 const char *fwc_strf(fwc_tree_t *tree, const char *fmt, ...);
 size_t fwc_add_node(fwc_scope_t *scope, int kind, const char *format, const char *segment, uint64_t offset,
