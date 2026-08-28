@@ -21,9 +21,9 @@ extern "C" {
 #endif
 
 #define FWC_VERSION_MAJOR 0
-#define FWC_VERSION_MINOR 2
+#define FWC_VERSION_MINOR 4
 #define FWC_VERSION_PATCH 0
-#define FWC_VERSION_STRING "0.2.0"
+#define FWC_VERSION_STRING "0.4.0"
 
 #define FWC_OK 0
 #define FWC_ERR_ARG 1

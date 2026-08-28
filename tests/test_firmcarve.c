@@ -74,16 +74,22 @@ static void test_sample(void)
         CHECK((n = find(tree, FWC_KIND_IDENTIFIED, "pem")) != NULL && n->depth == 3);
     }
     CHECK(find(tree, FWC_KIND_FILESYSTEM, "tar") != NULL);
+    if (fwc_features() & FWC_FEATURE_ZLIB)
+        CHECK((n = find(tree, FWC_KIND_FILESYSTEM, "zip")) != NULL && fwc_node_get(tree, n->index + 1)->size == 400);
+    if (fwc_features() & FWC_FEATURE_LZ4)
+        CHECK(find(tree, FWC_KIND_STREAM, "lz4") != NULL);
+    if (fwc_features() & FWC_FEATURE_LZO)
+        CHECK(find(tree, FWC_KIND_STREAM, "lzop") != NULL);
     CHECK((n = find(tree, FWC_KIND_UNKNOWN, "high-entropy")) != NULL && n->size >= 131072);
     CHECK(count_warn(tree, FWC_WARN_HIGH_ENTROPY) == 1);
     CHECK(fwc_signed(tree) == FWC_SIGNED_UNKNOWN);
-    if ((fwc_features() & FWC_FEATURE_ZLIB) == FWC_FEATURE_ZLIB)
+    if ((fwc_features() & (FWC_FEATURE_ZLIB | FWC_FEATURE_LZ4 | FWC_FEATURE_LZO)) == (FWC_FEATURE_ZLIB | FWC_FEATURE_LZ4 | FWC_FEATURE_LZO))
         CHECK(fwc_unattributed(tree) == 196608 + 30);
     fwc_tree_destroy(tree);
 
     options.max_depth = 1;
     CHECK(fwc_carve(buf, len, &options, &tree) == FWC_OK);
-    CHECK(find(tree, FWC_KIND_IDENTIFIED, "pem") == NULL);
+    CHECK((n = find(tree, FWC_KIND_IDENTIFIED, "pem")) == NULL || n->depth <= 1);
     CHECK(count_warn(tree, FWC_WARN_BUDGET) > 0 || !(fwc_features() & FWC_FEATURE_ZLIB));
     fwc_tree_destroy(tree);
     free(buf);

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.4.0 - 2026-08-27
+
+- Zip archives: located through their end-of-central-directory record, stored and deflate entries
+  unpacked and scanned; other methods give `unpack-failed` for that entry.
+- lz4 frame and lzop streams, when lz4 and lzo are in the build.
+
 ## 0.2.0 - 2026-07-23
 
 - SquashFS 4.0 is now unpacked by a built-in reader (gzip, lzma, lzo, xz, lz4 and zstd blocks,

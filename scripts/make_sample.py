@@ -1,4 +1,4 @@
-import gzip, io, os, random, struct, tarfile
+import gzip, io, os, random, struct, subprocess, tarfile, zipfile, zlib
 
 def cpio(files):
     out = b""
@@ -20,11 +20,31 @@ def tar(files):
             t.addfile(info, io.BytesIO(data))
     return buf.getvalue()
 
+def zipped(files):
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        for name, data, method in files:
+            info = zipfile.ZipInfo(name, (2026, 7, 4, 0, 0, 0))
+            info.compress_type = method
+            z.writestr(info, data)
+    return buf.getvalue()
+
+def lzop(data):
+    head = struct.pack(">HHHBBIIIIB", 0x1030, 0x2080, 0x0940, 1, 5, 0, 0o100644, 0, 0, 0)
+    out = b"\x89LZO\0\r\n\x1a\n" + head + struct.pack(">I", zlib.adler32(head))
+    return out + struct.pack(">II", len(data), len(data)) + data + b"\0\0\0\0"
+
+def lz4(data):
+    return subprocess.run(["lz4", "-c", "-9"], input=data, stdout=subprocess.PIPE, check=True).stdout
+
 rng = random.Random(7)
 pem = b"-----BEGIN CERTIFICATE-----\n" + b"QUJD" * 40 + b"\n-----END CERTIFICATE-----\n"
 inner = cpio([("etc/cert.pem", pem), ("etc/motd", b"hello\n" * 50)])
 blob = b"\xff" * 4096 + gzip.compress(inner, mtime=0) + b"\0" * 512
 blob += tar([("a/readme", b"firmcarve sample\n" * 20)])
+blob += b"\0" * 64 + zipped([("cfg/app.conf", b"key=value\n" * 40, zipfile.ZIP_DEFLATED),
+                             ("cfg/raw.txt", b"stored entry\n", zipfile.ZIP_STORED)])
+blob += b"\0" * 64 + lz4(pem * 3) + b"\0" * 64 + lzop(b"lzop stored block\n" * 8)
 blob += b"\0" * (-len(blob) % 4096) + bytes(rng.getrandbits(8) for _ in range(196608))
 blob += b"tail-garbage-bytes-not-padding"
 path = os.path.join(os.path.dirname(__file__), "..", "tests", "data", "sample.bin")
