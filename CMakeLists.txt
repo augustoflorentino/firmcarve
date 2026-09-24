@@ -98,7 +98,8 @@ if(FIRMCARVE_BUILD_TESTS)
     enable_testing()
     add_executable(test_firmcarve tests/test_firmcarve.c)
     target_link_libraries(test_firmcarve PRIVATE firmcarve)
-    target_compile_definitions(test_firmcarve PRIVATE FWC_TEST_DATA="${PROJECT_SOURCE_DIR}/tests/data")
+    target_compile_definitions(test_firmcarve PRIVATE FWC_TEST_DATA="${PROJECT_SOURCE_DIR}/tests/data"
+        FWC_TEST_OUT="${PROJECT_BINARY_DIR}/test-out")
     add_test(NAME firmcarve COMMAND test_firmcarve)
 endif()
 

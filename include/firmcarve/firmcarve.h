@@ -20,10 +20,10 @@
 extern "C" {
 #endif
 
-#define FWC_VERSION_MAJOR 0
-#define FWC_VERSION_MINOR 4
+#define FWC_VERSION_MAJOR 1
+#define FWC_VERSION_MINOR 0
 #define FWC_VERSION_PATCH 0
-#define FWC_VERSION_STRING "0.4.0"
+#define FWC_VERSION_STRING "1.0.0"
 
 #define FWC_OK 0
 #define FWC_ERR_ARG 1
@@ -36,6 +36,7 @@ extern "C" {
 #define FWC_KIND_FILE 4
 #define FWC_KIND_IDENTIFIED 5
 #define FWC_KIND_UNKNOWN 6
+#define FWC_KIND_LINK 7
 
 #define FWC_WARN_BUDGET 1
 #define FWC_WARN_DAMAGED_HEADER 2
@@ -43,6 +44,8 @@ extern "C" {
 #define FWC_WARN_UNATTRIBUTED 4
 #define FWC_WARN_MISSING_EXTRA 5
 #define FWC_WARN_HIGH_ENTROPY 6
+#define FWC_WARN_PROBE_LIMIT 7
+#define FWC_WARN_EXTRACT 8
 
 #define FWC_SIGNED_NO 0
 #define FWC_SIGNED_YES 1
@@ -75,6 +78,7 @@ typedef struct fwc_options {
     uint64_t max_total_bytes;
     uint64_t max_entry_bytes;
     uint64_t max_entries;
+    uint32_t max_candidates;
     fwc_node_fn on_node;
     void *ctx;
     const char *extract_dir;

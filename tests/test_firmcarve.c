@@ -95,6 +95,57 @@ static void test_sample(void)
     free(buf);
 }
 
+#ifndef _WIN32
+#include <sys/stat.h>
+#include <unistd.h>
+
+static int exists(const char *dir, const char *rel)
+{
+    char path[2048];
+    struct stat st;
+
+    snprintf(path, sizeof(path), "%s/%s", dir, rel);
+    return lstat(path, &st) == 0;
+}
+
+static void test_extract(void)
+{
+    char dir[1024], path[1100], target[256];
+    fwc_options_t options;
+    fwc_tree_t *tree;
+    unsigned char *buf;
+    size_t len = 0;
+    ssize_t n;
+
+    snprintf(dir, sizeof(dir), "%s/extract-%ld", FWC_TEST_OUT, (long)getpid());
+    mkdir(FWC_TEST_OUT, 0755);
+    CHECK(mkdir(dir, 0755) == 0);
+    CHECK((buf = load("evil.bin", &len)) != NULL);
+    if (buf == NULL)
+        return;
+    fwc_options_init(&options);
+    options.extract_dir = dir;
+    CHECK(fwc_carve(buf, len, &options, &tree) == FWC_OK);
+    CHECK(count_warn(tree, FWC_WARN_EXTRACT) == 1);
+    CHECK(exists(dir, "cpio@0x0/evil.txt") && exists(dir, "cpio@0x0/abs/file"));
+    CHECK(exists(dir, "cpio@0x0/dir_back.txt") && exists(dir, "cpio@0x0/_CON.txt"));
+    CHECK(exists(dir, "cpio@0x0/a") && exists(dir, "cpio@0x0/A"));
+    CHECK(!exists(dir, "cpio@0x0/out") && !exists(dir, "../evil.txt"));
+    snprintf(path, sizeof(path), "%s/cpio@0x0/sub/chain", dir);
+    n = readlink(path, target, sizeof(target) - 1);
+    CHECK(n == 7 && memcmp(target, "../root", 7) == 0);
+    snprintf(path, sizeof(path), "%s/cpio@0x0/root", dir);
+    n = readlink(path, target, sizeof(target) - 1);
+    CHECK(n == 8 && memcmp(target, "abs/file", 8) == 0);
+    fwc_tree_destroy(tree);
+    free(buf);
+}
+#else
+static void test_extract(void)
+{
+}
+#endif
+
 static void test_args(void)
 {
     fwc_tree_t *tree = NULL;
@@ -112,6 +163,7 @@ int main(void)
 {
     test_args();
     test_sample();
+    test_extract();
     if (failures)
         fprintf(stderr, "%d failures\n", failures);
     return failures != 0;

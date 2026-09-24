@@ -262,6 +262,10 @@ static void fwc_sqfs_entry(fwc_sqfs_t *s, uint64_t block, unsigned offset, const
         fwc_sqfs_dir(s, p, path, depth + 1);
     else if (type == 2 || type == 9)
         fwc_sqfs_file(s, p, type == 9, path);
+    else if ((type == 3 || type == 10) && s->inodes.len - p >= 24 &&
+             s->inodes.len - p - 24 >= fwc_le(s->inodes.data + p + 20, 4))
+        fwc_fs_link(s->scope, s->node, path, (const char *)s->inodes.data + p + 24,
+                    (size_t)fwc_le(s->inodes.data + p + 20, 4));
 }
 
 static void fwc_sqfs_dir(fwc_sqfs_t *s, size_t p, const char *dir, unsigned depth)
@@ -359,7 +363,7 @@ size_t fwc_try_squashfs(fwc_scope_t *scope, size_t at)
     uint64_t used;
     unsigned block_log;
 
-    if (avail < 96 || memcmp(h, "hsqs", 4) != 0 || fwc_le(h + 0x1c, 2) != 4)
+    if (avail < 96 || memcmp(h, "hsqs", 4) != 0 || fwc_le(h + 0x1c, 2) != 4 || !fwc_probe(scope, FWC_PROBE_SQUASHFS))
         return 0;
     memset(&s, 0, sizeof(s));
     used = fwc_le(h + 0x28, 8);

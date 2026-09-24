@@ -330,7 +330,7 @@ size_t fwc_try_stream(fwc_scope_t *scope, size_t at)
     size_t used, node;
     int missing;
 
-    if (kind == NULL)
+    if (kind == NULL || !fwc_probe(scope, FWC_PROBE_STREAM))
         return 0;
     out.limit = (size_t)scope->tree->options.max_entry_bytes;
     used = fwc_decode(kind, scope->buf + at, scope->len - at, &out, &missing);

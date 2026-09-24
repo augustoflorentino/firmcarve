@@ -16,9 +16,6 @@ unattributed, and any 64 KiB stretch above 7.9 bits/byte with no known format be
 `unknown` node with an `FWT-IMG-001` warning. `fwc_signed` folds the signature facts of every
 container into one answer: `no`, `yes`, or `unknown` when part of the image was not understood.
 
-Limits are explicit: depth 8, 2 GiB in total, 256 MiB per entry and 200 000 entries by default.
-Hitting one adds a `budget-exceeded` warning and the scan goes on.
-
 ## Build
 
 ```sh
@@ -45,8 +42,15 @@ if (fwc_carve(buf, len, &options, &tree) == FWC_OK) {
 ```
 
 `options.on_node` is called for each node as it is found, with the node's bytes (decompressed for
-streams). `options.extract_dir` writes every file, stream and unknown region as a flat file
-`NNNNNN-name` under that directory; names are sanitized and nothing is written outside it.
+streams, the target for links). `options.extract_dir` names an existing directory to write the tree
+into: every node with bytes becomes a file at its own path, its children go in `<name>.d/`, and
+filesystem entries keep their directories. Names are cleaned for every platform and nothing is
+written outside the directory or through a symlink. Links are created last, rewritten to stay
+inside their filesystem; one that would leave it is refused with a warning.
+
+Limits are explicit: depth 8, 2 GiB in total, 256 MiB per entry, 200 000 entries and 50 000
+candidates per format family by default. Hitting one adds a `budget-exceeded` or `probe-limit`
+warning and the scan goes on.
 
 [`examples/firmcarve.c`](examples/firmcarve.c) prints the tree of a file (`-x dir` extracts).
 

@@ -50,7 +50,7 @@ static size_t fwc_try_container(fwc_scope_t *scope, size_t at)
     const char *format;
 
     if (fwh_probe(scope->buf, scope->len, at, &formats) != FWH_OK || formats == 0 ||
-        fwh_open(scope->buf, scope->len, at, FWH_FMT_NONE, FWH_OPEN_AUDIT, NULL, &image, &error_at) != FWH_OK)
+        !fwc_probe(scope, FWC_PROBE_CONTAINER) || fwh_open(scope->buf, scope->len, at, FWH_FMT_NONE, FWH_OPEN_AUDIT, NULL, &image, &error_at) != FWH_OK)
         return 0;
     format = fwh_format_name(fwh_image_format(image));
     size = (size_t)fwh_image_size(image);
@@ -101,9 +101,11 @@ static void fwc_build_filter(unsigned char *near, unsigned char *far)
 void fwc_scan(fwc_scope_t *scope)
 {
     unsigned char near[256] = {0}, far[256] = {0};
+    uint32_t probes[FWC_PROBE_COUNT] = {0};
     size_t at = 0, size, count = 0, cap = 0, *claims = NULL, *grown;
 
     fwc_build_filter(near, far);
+    scope->probes = probes;
     while (at < scope->len && !scope->tree->failed) {
         if (!near[scope->buf[at]] &&
             !(scope->len - at > FWC_SAFELOADER_AT && far[scope->buf[at + FWC_SAFELOADER_AT]]) &&
@@ -130,6 +132,7 @@ void fwc_scan(fwc_scope_t *scope)
     if (scope->depth == 0)
         fwc_measure(scope, claims, count);
     free(claims);
+    scope->probes = NULL;
 }
 
 void fwc_scan_child(fwc_scope_t *scope, size_t node, const unsigned char *buf, size_t len)
@@ -137,7 +140,10 @@ void fwc_scan_child(fwc_scope_t *scope, size_t node, const unsigned char *buf, s
     fwc_scope_t inner;
 
     if (scope->depth + 1 > scope->tree->options.max_depth) {
-        fwc_warn(scope->tree, FWC_WARN_BUDGET, scope->tree->nodes[node].path, "max_depth");
+        if (scope->tree->depth_skipped++ == 0) {
+            scope->tree->depth_warning = scope->tree->warning_count;
+            fwc_warn(scope->tree, FWC_WARN_BUDGET, scope->tree->nodes[node].path, "max_depth");
+        }
         return;
     }
     inner.tree = scope->tree;
@@ -146,5 +152,6 @@ void fwc_scan_child(fwc_scope_t *scope, size_t node, const unsigned char *buf, s
     inner.parent = node;
     inner.depth = scope->depth + 1;
     inner.path = scope->tree->nodes[node].path;
+    inner.probes = NULL;
     fwc_scan(&inner);
 }

@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static int fwc_grow(void **items, size_t *cap, size_t count, size_t size)
+int fwc_grow(void **items, size_t *cap, size_t count, size_t size)
 {
     size_t next = *cap ? *cap * 2 : 64;
     void *grown;
@@ -67,8 +67,8 @@ size_t fwc_add_node(fwc_scope_t *scope, int kind, const char *format, const char
     tree->node_count++;
     if (tree->options.on_node)
         tree->options.on_node(tree->options.ctx, node, data, data_len);
-    if (tree->options.extract_dir && data && kind != FWC_KIND_IDENTIFIED)
-        fwc_extract_node(tree, node, data, data_len);
+    if (tree->options.extract_dir)
+        fwc_extract_node(tree, node, segment, data, data_len);
     return node->index;
 }
 
@@ -99,6 +99,21 @@ void fwc_missing(fwc_scope_t *scope, const char *what)
     fwc_warn(tree, FWC_WARN_MISSING_EXTRA, scope->path, what);
 }
 
+int fwc_probe(fwc_scope_t *scope, int slot)
+{
+    static const char *const names[FWC_PROBE_COUNT] = {"container", "flash filesystem", "squashfs", "stream",
+                                                       "cpio",      "tar",              "zip",      "identified"};
+
+    if (scope->probes == NULL || scope->probes[slot] < scope->tree->options.max_candidates) {
+        if (scope->probes)
+            scope->probes[slot]++;
+        return 1;
+    }
+    if (scope->probes[slot]++ == scope->tree->options.max_candidates)
+        fwc_warn(scope->tree, FWC_WARN_PROBE_LIMIT, scope->path, names[slot]);
+    return 0;
+}
+
 int fwc_take(fwc_tree_t *tree, uint64_t bytes, const char *where)
 {
     if (tree->options.max_total_bytes - tree->produced < bytes) {
@@ -120,6 +135,7 @@ void fwc_options_init(fwc_options_t *options)
     options->max_total_bytes = (uint64_t)2 << 30;
     options->max_entry_bytes = (uint64_t)256 << 20;
     options->max_entries = 200000;
+    options->max_candidates = 50000;
 }
 
 void fwc_tree_destroy(fwc_tree_t *tree)
@@ -131,6 +147,8 @@ void fwc_tree_destroy(fwc_tree_t *tree)
     for (i = 0; i < tree->strings.count; i++)
         free(tree->strings.items[i]);
     free(tree->strings.items);
+    free(tree->child_base);
+    free(tree->links);
     free(tree->nodes);
     free(tree->warnings);
     free(tree);
@@ -156,7 +174,13 @@ int fwc_carve(const unsigned char *buf, size_t buf_len, const fwc_options_t *opt
     scope.parent = (size_t)-1;
     scope.depth = 0;
     scope.path = "";
+    scope.probes = NULL;
     fwc_scan(&scope);
+    if (tree->options.extract_dir && !tree->failed)
+        fwc_extract_links(tree);
+    if (tree->depth_skipped > 1 && tree->depth_warning < tree->warning_count)
+        tree->warnings[tree->depth_warning].detail =
+            fwc_strf(tree, "max_depth (%zu nodes not scanned)", tree->depth_skipped);
     if (tree->failed) {
         fwc_tree_destroy(tree);
         return FWC_ERR_NOMEM;
@@ -217,13 +241,13 @@ const char *fwc_strerror(int status)
 
 const char *fwc_kind_name(int kind)
 {
-    static const char *const names[] = {"none", "container", "filesystem", "stream", "file", "identified", "unknown"};
+    static const char *const names[] = {"none", "container", "filesystem", "stream", "file", "identified", "unknown", "link"};
     return fwc_pick(names, sizeof(names) / sizeof(names[0]), kind);
 }
 
 const char *fwc_warning_name(int code)
 {
     static const char *const names[] = {"none",        "budget-exceeded", "damaged-header", "unpack-failed",
-                                        "unattributed", "missing-extra",  "FWT-IMG-001"};
+                                        "unattributed", "missing-extra",  "FWT-IMG-001", "probe-limit", "extract-refused"};
     return fwc_pick(names, sizeof(names) / sizeof(names[0]), code);
 }

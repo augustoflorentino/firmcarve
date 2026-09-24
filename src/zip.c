@@ -72,7 +72,7 @@ size_t fwc_try_zip(fwc_scope_t *scope, size_t at)
     size_t eocd, central, end, node, i, count;
 
     if (scope->len - at < FWC_ZIP_LOCAL + FWC_ZIP_EOCD || memcmp(scope->buf + at, "PK\x03\x04", 4) != 0 ||
-        (eocd = fwc_zip_eocd(scope->buf, scope->len, at)) == 0)
+        !fwc_probe(scope, FWC_PROBE_ZIP) || (eocd = fwc_zip_eocd(scope->buf, scope->len, at)) == 0)
         return 0;
     e = scope->buf + eocd;
     count = fwc_z(e + 10, 2);
