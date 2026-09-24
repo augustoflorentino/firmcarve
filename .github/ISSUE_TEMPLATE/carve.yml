@@ -1,0 +1,28 @@
+name: Carves a firmware wrong
+description: A region missing, misplaced, or a warning that should not be there
+labels: [carving]
+body:
+  - type: input
+    id: image
+    attributes:
+      label: Firmware
+      description: Vendor, model and version, with a public download link
+    validations:
+      required: true
+  - type: textarea
+    id: tree
+    attributes:
+      label: Output of examples/firmcarve on it
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should be there instead
+      description: binwalk, unblob or the vendor's own layout, if you have them
+  - type: input
+    id: version
+    attributes:
+      label: firmcarve version and codecs in the build
+      placeholder: "1.0.0, fwc_features() = 0x3f"
