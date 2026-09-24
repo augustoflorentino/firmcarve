@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If firmcarve took part in a firmware analysis you publish, please cite it."
+type: software
+title: firmcarve
+abstract: "C library that finds, validates and unpacks every region of a firmware blob into a tree: containers, flash filesystems, squashfs, compressed streams and archives"
+authors:
+  - family-names: Florentino
+    given-names: Augusto
+license: MIT
+repository-code: "https://github.com/augustoflorentino/firmcarve"
+keywords:
+  - c
+  - c99
+  - library
+  - firmware
+  - carving
+  - squashfs
+  - reverse-engineering
+  - embedded
